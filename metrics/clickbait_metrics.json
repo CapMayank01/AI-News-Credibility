@@ -1,0 +1,20 @@
+{
+  "label_source": "headline heuristic; replace with a human-labelled clickbait dataset",
+  "samples": 44898,
+  "positive_samples": 2975,
+  "test_samples": 8980,
+  "accuracy": 0.9269487750556793,
+  "precision": 0.4711992445703494,
+  "recall": 0.838655462184874,
+  "f1": 0.6033857315598549,
+  "confusion_matrix": [
+    [
+      7825,
+      560
+    ],
+    [
+      96,
+      499
+    ]
+  ]
+}

@@ -1,0 +1,117 @@
+{
+  "baseline": {
+    "test_samples": 6735,
+    "accuracy": 0.9894580549368968,
+    "precision": 0.9863734902446578,
+    "recall": 0.9915940224159402,
+    "f1": 0.9889768669461264,
+    "confusion_matrix": [
+      [
+        3479,
+        44
+      ],
+      [
+        27,
+        3185
+      ]
+    ],
+    "note": "class prediction works; predict_proba is incompatible across saved/current sklearn versions"
+  },
+  "distilbert": {
+    "smoke_test_samples": 32,
+    "accuracy": 1.0,
+    "predictions": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "labels": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "note": "artifact load and CPU inference smoke test; not a full held-out evaluation"
+  },
+  "clickbait": {
+    "label_source": "headline heuristic; replace with a human-labelled clickbait dataset",
+    "samples": 44898,
+    "positive_samples": 2975,
+    "test_samples": 8980,
+    "accuracy": 0.9269487750556793,
+    "precision": 0.4711992445703494,
+    "recall": 0.838655462184874,
+    "f1": 0.6033857315598549,
+    "confusion_matrix": [
+      [
+        7825,
+        560
+      ],
+      [
+        96,
+        499
+      ]
+    ]
+  },
+  "faiss": {
+    "vectors": 5000,
+    "dimensions": 384
+  }
+}
