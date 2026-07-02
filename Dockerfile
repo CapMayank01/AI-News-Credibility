@@ -7,7 +7,10 @@ RUN apt-get update && apt-get install -y \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# Upgrade pip first
+# Create a non-root user
+RUN useradd -m -u 1000 appuser
+
+# Upgrade pip
 RUN pip install --upgrade pip
 
 # Copy requirements
@@ -17,7 +20,10 @@ COPY requirements.txt .
 RUN pip install -r requirements.txt
 
 # Copy application
-COPY . .
+COPY --chown=appuser:appuser . .
+
+# Switch to non-root user
+USER appuser
 
 # Expose port
 EXPOSE 8000
