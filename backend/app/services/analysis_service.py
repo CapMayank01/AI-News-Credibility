@@ -167,8 +167,11 @@ class AnalysisService:
         avg_similarity = self._calculate_avg_similarity(similarity_results)
         
         # Calculate reliability score
+        # Use probability of being Real for reliability scoring
+        model_real_prob = model_confidence if prediction == 1 else (1.0 - model_confidence)
+        
         reliability_data = ReliabilityScorer.calculate_score(
-            model_confidence=model_confidence * 100,
+            model_confidence=model_real_prob * 100,
             source_credibility=source_score,
             average_similarity=avg_similarity,
             clickbait_probability=clickbait_score
