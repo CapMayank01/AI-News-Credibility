@@ -4,7 +4,7 @@ Configuration settings.
 
 from pydantic_settings import BaseSettings
 from pydantic import field_validator
-from typing import List
+from typing import List, Any
 import os
 from dotenv import load_dotenv
 
@@ -78,7 +78,7 @@ class Settings(BaseSettings):
     device: str = os.getenv('DEVICE', 'cpu')
     
     # CORS
-    cors_origins: List[str] = [
+    cors_origins: Any = [
         "http://localhost:3000",
         "http://localhost:8000",
         "http://127.0.0.1:3000"
