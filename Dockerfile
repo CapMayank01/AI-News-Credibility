@@ -11,13 +11,13 @@ RUN apt-get update && apt-get install -y \
 RUN useradd -m -u 1000 appuser
 
 # Upgrade pip
-RUN pip install --upgrade pip
+RUN pip install --upgrade pip --root-user-action=ignore
 
 # Copy requirements
 COPY requirements.txt .
 
 # Install Python dependencies
-RUN pip install -r requirements.txt
+RUN pip install --root-user-action=ignore -r requirements.txt
 
 # Copy application
 COPY --chown=appuser:appuser . .
@@ -28,5 +28,8 @@ USER appuser
 # Expose port
 EXPOSE 8000
 
+# Set PYTHONPATH environment variable so app modules can be loaded from backend subfolder
+ENV PYTHONPATH=/app/backend
+
 # Run the application
-CMD ["sh", "-c", "cd backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT"]
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port $PORT"]

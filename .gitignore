@@ -59,12 +59,13 @@ datasets/processed/*
 !datasets/processed/.gitkeep
 ml_models/*
 !ml_models/.gitkeep
+!ml_models/*.joblib
 faiss_index/*
 !faiss_index/.gitkeep
 *.pkl
 *.pt
 *.pth
-*.joblib
+# *.joblib
 
 # Database
 *.db

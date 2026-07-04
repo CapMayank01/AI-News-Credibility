@@ -12,11 +12,22 @@ import numpy as np
 from app.core.config import settings
 from app.utils.text_cleaner import TextCleaner
 from app.utils.source_credibility import SourceCredibilityEngine
-from app.utils.semantic_similarity import SemanticSimilarityEngine
 from app.utils.reliability_scorer import ReliabilityScorer
 from app.utils.explainability import ExplainabilityModule
 from app.utils.clickbait_detector import ClickbaitDetector
-from app.utils.distilbert_model import DistilBertTrainer
+
+# Resilient imports for heavy dependencies
+try:
+    from app.utils.semantic_similarity import SemanticSimilarityEngine
+except ImportError:
+    SemanticSimilarityEngine = None
+
+try:
+    from app.utils.distilbert_model import DistilBertTrainer
+except ImportError:
+    DistilBertTrainer = None
+
+import os
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -43,35 +54,62 @@ class AnalysisService:
             logger.info("Source credibility engine initialized")
             
             # Initialize semantic similarity engine (optional - loads if index exists)
-            try:
-                self.semantic_engine = SemanticSimilarityEngine(
-                    model_name=settings.embedder_model,
-                    device=settings.device
-                )
+            self.semantic_engine = None
+            if SemanticSimilarityEngine is not None:
                 try:
-                    self.semantic_engine.load_index(
-                        settings.faiss_index_path, settings.faiss_articles_path
+                    self.semantic_engine = SemanticSimilarityEngine(
+                        model_name=settings.embedder_model,
+                        device=settings.device
                     )
-                    logger.info("Semantic similarity engine loaded with FAISS index")
-                except:
-                    logger.warning("FAISS index not found - semantic search unavailable")
+                    try:
+                        self.semantic_engine.load_index(
+                            settings.faiss_index_path, settings.faiss_articles_path
+                        )
+                        logger.info("Semantic similarity engine loaded with FAISS index")
+                    except:
+                        logger.warning("FAISS index not found - semantic search unavailable")
+                        self.semantic_engine = None
+                except Exception as e:
+                    logger.warning(f"Could not initialize semantic engine: {e}")
                     self.semantic_engine = None
-            except Exception as e:
-                logger.warning(f"Could not initialize semantic engine: {e}")
-                self.semantic_engine = None
+            else:
+                logger.info("Semantic similarity engine unavailable (missing dependencies)")
             
             # Initialize fake news model
-            try:
-                self.fake_news_model = DistilBertTrainer(
-                    device=settings.device,
-                    tokenizer_path=settings.tokenizer_path,
-                    pretrained=False
-                )
-                self.fake_news_model.load(settings.model_path)
-                logger.info("Fake news DistilBERT model loaded")
-            except Exception as e:
-                logger.warning(f"Could not load DistilBERT model: {e}")
-                self.fake_news_model = None
+            self.fake_news_model = None
+            if DistilBertTrainer is not None and os.path.exists(settings.model_path):
+                try:
+                    self.fake_news_model = DistilBertTrainer(
+                        device=settings.device,
+                        tokenizer_path=settings.tokenizer_path,
+                        pretrained=False
+                    )
+                    self.fake_news_model.load(settings.model_path)
+                    logger.info("Fake news DistilBERT model loaded")
+                except Exception as e:
+                    logger.warning(f"Could not load DistilBERT model: {e}")
+                    self.fake_news_model = None
+            else:
+                logger.warning("DistilBERT model weights not found or trainer unavailable.")
+
+            # Fallback to Baseline model if DistilBERT is not loaded
+            self.baseline_model = None
+            self.baseline_vectorizer = None
+            if self.fake_news_model is None:
+                try:
+                    import joblib
+                    baseline_path = os.getenv('BASELINE_MODEL_PATH', './ml_models/baseline_model.joblib')
+                    vectorizer_path = os.getenv('TFIDF_VECTORIZER_PATH', './ml_models/tfidf_vectorizer.joblib')
+                    
+                    if os.path.exists(baseline_path) and os.path.exists(vectorizer_path):
+                        logger.info("Loading baseline fake news model as fallback...")
+                        self.baseline_model = joblib.load(baseline_path)
+                        self.baseline_vectorizer = joblib.load(vectorizer_path)
+                        logger.info("Baseline fake news model loaded successfully")
+                    else:
+                        logger.warning(f"Baseline model weights not found at {baseline_path} or vectorizer not found at {vectorizer_path}. Predictions will be mocked.")
+                except Exception as e:
+                    logger.error(f"Failed to load baseline model fallback: {e}")
             
             # Initialize clickbait detector
             try:
@@ -169,18 +207,28 @@ class AnalysisService:
     
     def _get_model_prediction(self, text: str) -> tuple:
         """Get prediction from fake news model."""
-        if not self.fake_news_model:
-            logger.warning("Model not available, returning default prediction")
-            return 1, 0.5  # Default to real with low confidence
+        if self.fake_news_model:
+            try:
+                predictions, probabilities = self.fake_news_model.predict([text])
+                prediction = int(predictions[0])
+                confidence = float(probabilities[0][prediction])
+                return prediction, confidence
+            except Exception as e:
+                logger.error(f"Error getting DistilBERT model prediction: {e}")
+                # Fall through to baseline if loaded
         
-        try:
-            predictions, probabilities = self.fake_news_model.predict([text])
-            prediction = int(predictions[0])
-            confidence = float(probabilities[0][prediction])
-            return prediction, confidence
-        except Exception as e:
-            logger.error(f"Error getting model prediction: {e}")
-            return 1, 0.5
+        if self.baseline_model and self.baseline_vectorizer:
+            try:
+                X_vec = self.baseline_vectorizer.transform([text])
+                prediction = int(self.baseline_model.predict(X_vec)[0])
+                probabilities = self.baseline_model.predict_proba(X_vec)
+                confidence = float(probabilities[0][prediction])
+                return prediction, confidence
+            except Exception as e:
+                logger.error(f"Error getting baseline model prediction: {e}")
+                
+        logger.warning("No models available, returning default prediction")
+        return 1, 0.5  # Default to real with low confidence
     
     def _get_source_credibility(self, source_url: Optional[str]) -> float:
         """Get source credibility score."""

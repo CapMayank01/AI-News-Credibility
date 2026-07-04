@@ -32,6 +32,14 @@ class Settings(BaseSettings):
         'DATABASE_URL',
         'sqlite:///./news_credibility.db'
     )
+
+    @field_validator('database_url', mode='before')
+    @classmethod
+    def parse_database_url(cls, value):
+        """Fix postgres:// to postgresql:// for SQLAlchemy."""
+        if isinstance(value, str) and value.startswith("postgres://"):
+            return value.replace("postgres://", "postgresql://", 1)
+        return value
     
     # Models
     model_path: str = os.getenv(
@@ -75,6 +83,23 @@ class Settings(BaseSettings):
         "http://localhost:8000",
         "http://127.0.0.1:3000"
     ]
+
+    @field_validator('cors_origins', mode='before')
+    @classmethod
+    def parse_cors_origins(cls, value):
+        """Parse CORS origins if passed as string or JSON list."""
+        if isinstance(value, str):
+            value = value.strip()
+            if value.startswith('[') and value.endswith(']'):
+                import json
+                try:
+                    return json.loads(value)
+                except Exception:
+                    pass
+            if ',' in value:
+                return [orig.strip() for orig in value.split(',')]
+            return [value]
+        return value
     
     # Rate Limiting
     rate_limit_requests: int = 100
